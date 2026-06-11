@@ -1,9 +1,17 @@
 from fastapi import FastAPI, HTTPException, status
-
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .models import ApplicationCreate, ApplicationUpdate, Application
 from .store import store
 
 app = FastAPI(title="Job Application Tracker")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/applications", response_model=list[Application])
 def list_application():
@@ -32,4 +40,6 @@ def delete_application(app_id: int):
     deleted = store.delete(app_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Application not found")
-    
+
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

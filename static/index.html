@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Application Tracker</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+  }
+  h1 { font-size: 1.5rem; }
+  form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  input, select, button {
+    padding: 8px;
+    font-size: 0.95rem;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+  th { font-size: 0.8rem; text-transform: uppercase; color: #666; }
+  button { cursor: pointer; }
+  .delete-btn { color: #c00; background: none; border: 1px solid #c00; border-radius: 4px; }
+  .empty { color: #888; font-style: italic; padding: 16px 0; }
+</style>
+</head>
+<body>
+  <h1>Job Application Tracker</h1>
+
+  <!-- Add form -->
+  <form id="add-form">
+    <input type="text" id="company" placeholder="Company" required>
+    <input type="text" id="role" placeholder="Role" required>
+    <select id="status">
+      <option value="applied">Applied</option>
+      <option value="interviewing">Interviewing</option>
+      <option value="offer">Offer</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <input type="date" id="applied_date" required>
+    <button type="submit">Add</button>
+  </form>
+
+  <!-- List -->
+  <table>
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Applied</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="app-list"></tbody>
+  </table>
+  <div id="empty-msg" class="empty" style="display:none;">No applications yet. Add one above.</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+// READ — load all applications and render the table
+async function loadApplications() {
+  const res = await fetch(`${API}/applications`);
+  const apps = await res.json();
+
+  const tbody = document.getElementById("app-list");
+  const emptyMsg = document.getElementById("empty-msg");
+  tbody.innerHTML = "";
+
+  if (apps.length === 0) {
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  for (const app of apps) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${app.company}</td>
+      <td>${app.role}</td>
+      <td>
+        <select onchange="updateStatus(${app.id}, this.value)">
+          <option value="applied"      ${app.status === "applied" ? "selected" : ""}>Applied</option>
+          <option value="interviewing" ${app.status === "interviewing" ? "selected" : ""}>Interviewing</option>
+          <option value="offer"        ${app.status === "offer" ? "selected" : ""}>Offer</option>
+          <option value="rejected"     ${app.status === "rejected" ? "selected" : ""}>Rejected</option>
+        </select>
+      </td>
+      <td>${app.applied_date}</td>
+      <td><button class="delete-btn" onclick="deleteApplication(${app.id})">Delete</button></td>
+    `;
+    tbody.appendChild(row);
+  }
+}
+
+// CREATE — POST a new application
+async function addApplication(event) {
+  event.preventDefault();
+  const body = {
+    company: document.getElementById("company").value,
+    role: document.getElementById("role").value,
+    status: document.getElementById("status").value,
+    applied_date: document.getElementById("applied_date").value,
+  };
+  await fetch(`${API}/applications`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  document.getElementById("add-form").reset();
+  loadApplications();
+}
+
+// UPDATE — PATCH the status of one application
+async function updateStatus(id, newStatus) {
+  await fetch(`${API}/applications/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: newStatus }),
+  });
+  loadApplications();
+}
+
+// DELETE — remove one application
+async function deleteApplication(id) {
+  await fetch(`${API}/applications/${id}`, { method: "DELETE" });
+  loadApplications();
+}
+
+// Wire up the form and load on page open
+document.getElementById("add-form").addEventListener("submit", addApplication);
+loadApplications();
+</script>
+</body>
+</html>
