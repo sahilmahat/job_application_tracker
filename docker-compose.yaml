@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: jobtracker_user
+      POSTGRES_PASSWORD: devpassword123
+      POSTGRES_DB: jobtracker
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobtracker_user -d jobtracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://jobtracker_user:devpassword123@db:5432/jobtracker
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
