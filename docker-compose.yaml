@@ -13,15 +13,23 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  jobtracker:
     build: .
-    ports:
-      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://jobtracker_user:devpassword123@db:5432/jobtracker
     depends_on:
       db:
         condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/usr/share/nginx/html:ro
+    depends_on:
+      - jobtracker
 
 volumes:
   pgdata:
